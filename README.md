@@ -3,13 +3,13 @@
 Crash Bandicoot: The Wrath of Cortex (PS2) running natively on Mac, no emulator. The game's executable is recompiled to C and
 runs on the [PS2 native runtime](../ps2-native-runtime).
 
-This is a very early work in progress and it still has bugs. It boots into the game's own code, loads its files and draws with
-the game's own graphics programs, but it doesn't reach the title screen yet.
+This is a very early work in progress and it still has bugs. It boots into the game's own code, loads its files, draws with
+the game's own graphics programs and plays the logos, but it doesn't reach the title screen yet.
 
 ## Still to do
 
 * Reach the title screen and play
-* Sound, controllers and saving
+* Sound
 * A Mac app
 
 ## Building
