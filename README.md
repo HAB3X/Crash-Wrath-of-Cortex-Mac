@@ -4,11 +4,12 @@ Crash Bandicoot: The Wrath of Cortex (PS2) running natively on Mac, no emulator.
 runs on the [PS2 native runtime](../ps2-native-runtime).
 
 This is a very early work in progress and it still has bugs. It boots into the game's own code, loads its files, draws with
-the game's own graphics programs and plays the logos, but it doesn't reach the title screen yet.
+the game's own graphics programs, and plays from the title screen into the Warp Room: Crash moves, and the game saves to
+and loads from the memory card (a folder on your Mac). It runs slower than the PS2 in places, and there's no sound yet.
 
 ## Still to do
 
-* Reach the title screen and play
+* Full speed, the levels
 * Sound
 * A Mac app
 
@@ -21,7 +22,9 @@ to ps2-native-runtime, then:
     cmake --build build
     ./run.sh
 
-`run.sh` takes the disc from `WOC_DISC` or from `local.json` (`{"disc": "/path/to/game.cue"}`). `--headless --snapshots DIR
+`run.sh` takes the disc from `WOC_DISC` or from `local.json` (`{"disc": "/path/to/game.cue"}`). Controls: arrows, W A S D,
+X (cross), C (circle), Z (square), V (triangle), Return (start), or a gamepad. Saves go to
+`~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/memcards/port0`. `--headless --snapshots DIR
 --snapshot-every 5` saves pictures instead of opening a window.
 
 The executable is read from your disc at build time and the recompiled code stays in `build/`.
