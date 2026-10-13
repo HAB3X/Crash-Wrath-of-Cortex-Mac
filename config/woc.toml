@@ -1,0 +1,14 @@
+# Crash Bandicoot: The Wrath of Cortex, USA v1.01 (SLUS-20238): the recompiler's settings for its executable.
+
+[executable]
+name = "SLUS_202.38"
+sha1 = "016d5abca37996346582fffdc07970c89bb4514a"
+
+[functions]
+# Function starts the analysis can't find (reached only through computed addresses)
+extra = []
+# Addresses that look like starts but aren't
+not = []
+
+[overrides]
+# address = "host function": replaced by the runtime or by src/
