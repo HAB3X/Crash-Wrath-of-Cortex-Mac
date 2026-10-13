@@ -5,7 +5,7 @@ runs on the [PS2 native runtime](../ps2-native-runtime).
 
 This is a very early work in progress and it still has bugs. It boots into the game's own code, loads its files, draws with
 the game's own graphics programs, and plays from the title screen into the Warp Room: Crash moves, and the game saves to
-and loads from the memory card (a folder on your Mac). It runs slower than the PS2 in places, and there's no sound yet.
+and loads from the memory card (a folder on your Mac). Its texts talk about a computer, not a PlayStation 2 (`PC_TEXT.md`). There's no sound yet.
 
 ## Still to do
 
