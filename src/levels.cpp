@@ -16,9 +16,9 @@
 // last entry not a level), and their names (LevelName, the text table's rows from 0x5E0680).
 //
 // The game's state (USA v1.01): Level 0x63F7B0, new_level 0x63F7B4, new_mode 0x63F96C, GameMode 0x63FD0C, Paused 0x63F70C, Demo
-// 0x63F970, cutmovie 0x641844 (-1 in play, 0 the title), next_cut_movie 0x641924, cutworldix 0x641920, fadeval 0x63E68C,
-// fade_rate 0x63E694, the menu cursor 0x5A4380 (its menu at +0x5E: -1 none, 0 the title's main menu), the name 0x59D518,
-// NewMenu 0x1E2910.
+// 0x63F970, warp_level 0x63F7BC (a portal's level while Crash warps into it, HubLevelSelect at 0x1DBC30; -1 none), cutmovie
+// 0x641844 (-1 in play, 0 the title), next_cut_movie 0x641924, cutworldix 0x641920, fadeval 0x63E68C, fade_rate 0x63E694, the
+// menu cursor 0x5A4380 (its menu at +0x5E: -1 none, 0 the title's main menu), the name 0x59D518, NewMenu 0x1E2910.
 #include "woc.h"
 
 #include "ps2/runtime.h"
@@ -34,6 +34,7 @@ constexpr u32 NewLevel = 0x63F7B4;
 constexpr u32 NewMode = 0x63F96C;
 constexpr u32 GameMode = 0x63FD0C;
 constexpr u32 Paused = 0x63F70C;
+constexpr u32 WarpLevel = 0x63F7BC;
 constexpr u32 Demo = 0x63F970;
 constexpr u32 CutMovie = 0x641844;
 constexpr u32 NextCutMovie = 0x641924;
@@ -101,7 +102,8 @@ bool InPlay()
 {
     s32 level = Read32(Level);
     return Read32(CutMovie) == -1 && level >= 0 && (level < Title || level == WarpRoom) && Read32(Demo) == 0 && Read32(GameMode) == 0 &&
-           Read32(NewLevel) == -1 && Read32(NewMode) == -1 && Read32(FadeValue) == 0 && Read32(Paused) == 0 && Menu() == -1;
+           Read32(NewLevel) == -1 && Read32(NewMode) == -1 && Read32(WarpLevel) == -1 && Read32(FadeValue) == 0 &&
+           Read32(Paused) == 0 && Menu() == -1;
 }
 
 // The title's main menu up, nothing chosen yet
