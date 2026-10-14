@@ -1,6 +1,6 @@
 // The game's settings in the runtime's PC menus, and its language at start-up.
 //
-// Gameplay: "Skip cutscenes" (src/skip.cpp) and "Language". The game's language follows the Mac's preferred languages as the
+// Gameplay: "Skip cutscenes" (src/skip.cpp), "Faster loading" (src/loading.cpp) and "Language". The game's language follows the Mac's preferred languages as the
 // console's would follow its own setting (the first of them the game has: English, French, German, Italian, Spanish, Dutch;
 // English otherwise), or the one chosen here. It's set as the game's own options menu sets it, with NewLanguage (0x239CE0: the
 // language's number into the Game's settings and the menus' texts copied for it): at start-up right after DefaultGame
@@ -31,6 +31,9 @@ int WocLevelActionCount();
 const Ps2GameAction* WocSavingActions();
 int WocSavingActionCount();
 void WocSavingFrame(Ps2Cpu* c);
+int WocFasterLoading();
+void WocSetFasterLoading(int on);
+void WocLoadingFrame(Ps2Cpu* c);
 
 using namespace Woc;
 
@@ -117,6 +120,7 @@ void SetEffectsVolume(int choice)
 
 const Ps2GameSetting Settings[] = {
     {"Gameplay", "Skip cutscenes", OffOn, WocSkipEnabled, WocSetSkipEnabled},
+    {"Gameplay", "Faster loading", OffOn, WocFasterLoading, WocSetFasterLoading},
     {"Gameplay", "Language", LanguageChoices, GetLanguage, SetLanguage},
     {"Sound", "Music volume", VolumeChoices, GetMusicVolume, SetMusicVolume},
     {"Sound", "Sound effects volume", VolumeChoices, GetEffectsVolume, SetEffectsVolume},
@@ -160,9 +164,11 @@ extern "C" void WocDefaultGame(Ps2Cpu* c)
     CallGame(c, f_00239ce0, {language});
 }
 
-// Every frame: a language chosen in the PC menus set, the save screen opened when it's asked for
+// Every frame: the loading screen's faster end (src/loading.cpp), a language chosen in the PC menus set, the save screen opened
+// when it's asked for (src/saving.cpp)
 extern "C" void WocFrame(Ps2Cpu* c)
 {
+    WocLoadingFrame(c);
     if (g_pendingLanguage >= 0)
     {
         int language = g_pendingLanguage;
