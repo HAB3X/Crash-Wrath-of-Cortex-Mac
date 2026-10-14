@@ -12,3 +12,5 @@ not = []
 
 [overrides]
 # address = "host function": replaced by the runtime or by src/
+# MenuItem: notes where each menu line is drawn (src/menus.cpp), then draws it as before
+"0x1e5478" = "WocMenuItem"

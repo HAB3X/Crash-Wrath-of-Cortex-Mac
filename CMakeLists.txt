@@ -15,5 +15,5 @@ endif()
 
 ps2_recompile(woc_code CONFIG ${CMAKE_CURRENT_SOURCE_DIR}/config/woc.toml DISC ${WOC_DISC} EXECUTABLE SLUS_202.38 FILES 48)
 
-add_executable(crash-woc src/main.cpp src/nusound.cpp src/typing.cpp src/pctext.cpp)
+add_executable(crash-woc src/main.cpp src/nusound.cpp src/typing.cpp src/pctext.cpp src/menus.cpp)
 target_link_libraries(crash-woc PRIVATE woc_code ps2runtime)

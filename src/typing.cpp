@@ -64,8 +64,11 @@ void Erase()
 
 int WocTyping() { return OnNameEntry() ? 1 : 0; }
 
+void WocMenusVblank();
+
 void WocVblank()
 {
+    WocMenusVblank();
     char typed[64];
     int n = ps2_take_typed(typed, sizeof(typed));
     if (n == 0 || !OnNameEntry())
