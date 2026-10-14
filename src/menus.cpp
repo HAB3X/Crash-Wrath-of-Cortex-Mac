@@ -107,12 +107,16 @@ void WocMenusVblank()
             Ps2::Log("menu %d line %d at %.3f %.3f", d.menu, d.line, d.x, d.y);
         }
     }
+    float x, y;
     if (Menu() == -1)
     {
+        // Clicks with no menu up go nowhere
         g_logged = false;
+        while (ps2_take_click(&x, &y))
+        {
+        }
         return;
     }
-    float x, y;
     if (ps2_mouse_moved(&x, &y))
     {
         if (const Drawn* d = LineAt(x, y))
