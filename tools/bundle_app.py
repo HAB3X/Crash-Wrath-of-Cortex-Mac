@@ -120,6 +120,17 @@ def standalone(source, out, name=None):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(licence, target)
 
+    # The menus' fonts (built into the program) come with their licences
+    for runtime in (ROOT / "ps2-native-runtime", ROOT.parent / "ps2-native-runtime"):
+        fonts = runtime / "runtime/fonts"
+        if fonts.is_dir():
+            for licence in [*fonts.glob("*.txt"), fonts / "README.md"]:
+                target = licenses / "fonts" / licence.name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(licence, target)
+            packages.add("fonts (Luckiest Guy, Fredoka)")
+            break
+
     return app, executable, copied, packages
 
 
