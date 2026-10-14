@@ -14,8 +14,8 @@
 
 const Ps2GameSetting* WocSettings();
 int WocSettingCount();
-const Ps2GameAction* WocLevelActions();
-int WocLevelActionCount();
+const Ps2GameAction* WocActions();
+int WocActionCount();
 
 namespace
 {
@@ -74,11 +74,11 @@ const Ps2GameSetting* Setting(const std::string& name)
 
 const Ps2GameAction* Action(const std::string& name)
 {
-    for (int i = 0; i < WocLevelActionCount(); i++)
+    for (int i = 0; i < WocActionCount(); i++)
     {
-        if (name == WocLevelActions()[i].name)
+        if (name == WocActions()[i].name)
         {
-            return &WocLevelActions()[i];
+            return &WocActions()[i];
         }
     }
     return nullptr;

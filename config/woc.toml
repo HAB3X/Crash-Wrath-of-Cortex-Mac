@@ -19,5 +19,8 @@ not = []
 "0x255680" = "WocUpdateGameCut"
 # DefaultGame: the language and the volumes chosen on the Mac (src/options.cpp)
 "0x1eed18" = "WocDefaultGame"
-# The sound effects' frame, called every frame of every loop: the PC menus' language changes (src/options.cpp)
-"0x248750" = "WocSoundFrame"
+# The sound effects' frame, called every frame of every loop: the PC menus' language changes and the save screen opened
+# (src/options.cpp)
+"0x248750" = "WocFrame"
+# UpdateSaveSlots: the save file's read without the memory card's minimum wait (src/saving.cpp)
+"0x253880" = "WocUpdateSaveSlots"

@@ -18,6 +18,7 @@
 #include <SDL3/SDL.h>
 
 #include <cstring>
+#include <vector>
 
 extern "C" void f_001eed18(Ps2Cpu* c); // DefaultGame
 extern "C" void f_00239ce0(Ps2Cpu* c); // NewLanguage(language)
@@ -27,6 +28,9 @@ int WocSkipEnabled();
 void WocSetSkipEnabled(int on);
 const Ps2GameAction* WocLevelActions();
 int WocLevelActionCount();
+const Ps2GameAction* WocSavingActions();
+int WocSavingActionCount();
+void WocSavingFrame(Ps2Cpu* c);
 
 using namespace Woc;
 
@@ -122,6 +126,22 @@ const Ps2GameSetting Settings[] = {
 const Ps2GameSetting* WocSettings() { return Settings; }
 int WocSettingCount() { return sizeof(Settings) / sizeof(Settings[0]); }
 
+// The actions: the pause menu's (src/saving.cpp), then the level select (src/levels.cpp)
+static std::vector<Ps2GameAction> AllActions()
+{
+    std::vector<Ps2GameAction> all(WocSavingActions(), WocSavingActions() + WocSavingActionCount());
+    all.insert(all.end(), WocLevelActions(), WocLevelActions() + WocLevelActionCount());
+    return all;
+}
+
+const Ps2GameAction* WocActions()
+{
+    static const std::vector<Ps2GameAction> all = AllActions();
+    return all.data();
+}
+
+int WocActionCount() { return WocSavingActionCount() + WocLevelActionCount(); }
+
 // DefaultGame: the settings' defaults at start-up, then the volumes and the language chosen in the PC menus
 extern "C" void WocDefaultGame(Ps2Cpu* c)
 {
@@ -140,8 +160,8 @@ extern "C" void WocDefaultGame(Ps2Cpu* c)
     CallGame(c, f_00239ce0, {language});
 }
 
-// Every frame: a language chosen in the PC menus set
-extern "C" void WocSoundFrame(Ps2Cpu* c)
+// Every frame: a language chosen in the PC menus set, the save screen opened when it's asked for
+extern "C" void WocFrame(Ps2Cpu* c)
 {
     if (g_pendingLanguage >= 0)
     {
@@ -149,5 +169,6 @@ extern "C" void WocSoundFrame(Ps2Cpu* c)
         g_pendingLanguage = -1;
         CallGame(c, f_00239ce0, {language});
     }
+    WocSavingFrame(c);
     f_00248750(c);
 }
