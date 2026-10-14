@@ -17,8 +17,17 @@ import sys
 import tempfile
 from pathlib import Path
 
-import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+try:
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+except ImportError:
+    # No icon then (the app is the same without one): the build goes on
+    print("make_icon.py: Pillow and NumPy are needed for the icon (python3 -m pip install pillow numpy); no icon made",
+          file=sys.stderr)
+    out = Path(sys.argv[sys.argv.index("--out") + 1]) if "--out" in sys.argv else Path("build/icon")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "AppIcon.icns").write_bytes(b"")
+    sys.exit(0)
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_TOOLS = [ROOT / "ps2-native-runtime/tools", ROOT.parent / "ps2-native-runtime/tools"]
