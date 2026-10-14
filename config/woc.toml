@@ -14,3 +14,10 @@ not = []
 # address = "host function": replaced by the runtime or by src/
 # MenuItem: notes where each menu line is drawn (src/menus.cpp), then draws it as before
 "0x1e5478" = "WocMenuItem"
+# UpdateCutMovie and UpdateGameCut: the cutscenes skipped by holding any button (src/skip.cpp)
+"0x254bd8" = "WocUpdateCutMovie"
+"0x255680" = "WocUpdateGameCut"
+# DefaultGame: the language and the volumes chosen on the Mac (src/options.cpp)
+"0x1eed18" = "WocDefaultGame"
+# The sound effects' frame, called every frame of every loop: the PC menus' language changes (src/options.cpp)
+"0x248750" = "WocSoundFrame"
