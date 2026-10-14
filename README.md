@@ -5,12 +5,13 @@ runs on the [PS2 native runtime](../ps2-native-runtime).
 
 This is a very early work in progress and it still has bugs. It boots into the game's own code, loads its files, draws with
 the game's own graphics programs, and plays from the title screen into the Warp Room: Crash moves, and the game saves to
-and loads from the memory card (a folder on your Mac). Its texts talk about a computer, not a PlayStation 2 (`PC_TEXT.md`). There's no sound yet.
+and loads from the memory card (a folder on your Mac). Its texts talk about a computer, not a PlayStation 2 (`PC_TEXT.md`). The sound is the game's own: its sound driver's
+commands play its samples and streams (music, voices) from the disc's SFX.DAT on the runtime's SPU2.
 
 ## Still to do
 
 * Full speed, the levels
-* Sound
+* The reverb (the game never turns it on so far)
 * A Mac app
 
 ## Building
@@ -28,7 +29,8 @@ Left Ctrl walks, the arrows are the d-pad; a gamepad works too. On the name scre
 Return is DONE). The keys can be changed in `~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/bindings.txt`.
 Saves go to
 `~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/memcards/port0`. `--headless --snapshots DIR
---snapshot-every 5` saves pictures instead of opening a window.
+--snapshot-every 5` saves pictures instead of opening a window; `--mute` plays no sound, `--audio-dump FILE.wav` keeps what's
+played, and `WOC_SOUND_TRACE=1` logs the sound driver's commands.
 
 The picture is drawn on the GPU at 3 times the PS2's resolution. `--scale 1-8` changes that, `--texture-upscale 2` (or 4)
 smooths the game's textures, and `--gs software` draws with the PS2's own rules at its resolution instead (slower); the same
