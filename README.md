@@ -8,6 +8,29 @@ the game's own graphics programs, and plays from the title screen into the Warp 
 and loads from the memory card (a folder on your Mac). Its texts talk about a computer, not a PlayStation 2 (`PC_TEXT.md`). The sound is the game's own: its sound driver's
 commands play its samples and streams (music, voices) from the disc's SFX.DAT on the runtime's SPU2.
 
+## PC features
+
+The same as the Crash Twinsanity Mac port's, where Wrath of Cortex has them (their settings and actions are in the runtime's
+PC menus):
+
+* Cutscenes: hold any button (a key, a mouse button, a gamepad's button) for half a second to skip the scene playing, with
+  "Hold any button to skip" shown while one can be skipped: the logos and the flight to the title, the intro and the endings,
+  the scenes in the Warp Room and in space between the warp rooms, a level's own cutscenes. Each ends the way the game's own
+  skip (start) or the scene's own end ends it (`src/skip.cpp`). Options > Gameplay > Skip cutscenes turns it off.
+* Extras: a level select, each warp room's levels and the secret levels. From play the level is started as the warp room's
+  portals start one (and after it the game goes back to the Warp Room); from the title's main menu it's a new game started in
+  that level (`src/levels.cpp`). Nothing is unlocked or written to the save.
+* Saving: the game's own save, its four slots in one file in the save folder. Pause > Save game (in the Warp Room) opens the
+  game's own save screen, as its save point does; the save is read without the memory card's wait (no CHECKING SAVE DATA),
+  and no screen mentions a memory card or a console (`src/saving.cpp`, `PC_TEXT.md`).
+* Faster loading (Options > Gameplay, on): a level's loading screen ends as soon as the level is loaded (`src/loading.cpp`).
+* The language follows the Mac's preferred languages (English, French, German, Italian, Spanish or Dutch, English otherwise),
+  or Options > Gameplay > Language; a loaded save brings its own, as on the PS2. Options > Sound has the game's music and
+  sound effects volumes (`src/options.cpp`).
+
+`WOC_MENU_TEST` tries the settings and actions without the menus, e.g. `WOC_MENU_TEST="12:run:Arctic Antics;20:set:Music
+volume=5"` (game time in seconds; `src/menutest.cpp`).
+
 ## Still to do
 
 * Full speed, the levels
