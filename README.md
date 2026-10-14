@@ -30,6 +30,10 @@ Saves go to
 `~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/memcards/port0`. `--headless --snapshots DIR
 --snapshot-every 5` saves pictures instead of opening a window.
 
+The picture is drawn on the GPU at 3 times the PS2's resolution. `--scale 1-8` changes that, `--texture-upscale 2` (or 4)
+smooths the game's textures, and `--gs software` draws with the PS2's own rules at its resolution instead (slower); the same
+settings are in `graphics.txt` next to `bindings.txt`.
+
 The executable is read from your disc at build time and the recompiled code stays in `build/`.
 
 ## Credits
