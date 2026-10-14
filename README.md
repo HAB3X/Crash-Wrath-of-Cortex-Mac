@@ -24,9 +24,12 @@ to ps2-native-runtime, then:
     ./run.sh
 
 `run.sh` takes the disc from `WOC_DISC` or from `local.json` (`{"disc": "/path/to/game.cue"}`). Controls (the Crash Twinsanity port's PC controls): W A S D move, Space jumps, the left mouse
-button or J spins, Left Shift or K crouches and slides, Tab or I is triangle, Z and C the shoulders, Escape or Return pauses,
-Left Ctrl walks, the arrows are the d-pad; a gamepad works too. On the name screen just type your name (Backspace deletes,
-Return is DONE). The keys can be changed in `~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/bindings.txt`.
+button or J spins, Left Shift or K crouches and slides, Tab or I is triangle, Z and C the shoulders, Return pauses (the
+game's own pause), Left Ctrl walks, the arrows are the d-pad; a gamepad works too. On the name screen just type your name
+(Backspace deletes, Return is DONE). Escape (or a gamepad's Back button) opens the PC menus, as in the Crash Twinsanity port:
+the game pauses under them; Options has the window or fullscreen (Cmd+F or Alt+Enter at any time), the picture's resolution
+and filters, the volume and every key to rebind, and Quit leaves the game. The settings are kept in
+`~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/` (`bindings.txt`, `graphics.txt`, `options.txt`).
 Saves go to
 `~/Library/Application Support/PS2 Native Runtime/SLUS_202.38/memcards/port0`. `--headless --snapshots DIR
 --snapshot-every 5` saves pictures instead of opening a window; `--mute` plays no sound, `--audio-dump FILE.wav` keeps what's
