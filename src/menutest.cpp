@@ -3,6 +3,7 @@
 //   S:set:NAME=CHOICE   the setting NAME given its choice number CHOICE (as the menus would: its set())
 //   S:get:NAME          the setting's choice logged
 //   S:run:NAME          the action NAME chosen, at S or as soon after as it's available
+//   S:poke:ADDRESS=WORD the game's memory changed (hexadecimal address, decimal word): to reach a scene for a test
 // e.g. WOC_MENU_TEST="12:run:Arctic Antics;30:set:Music volume=3". Each step is logged ("menu test:").
 #include "ps2/iop.h"
 #include "ps2/runtime.h"
@@ -53,7 +54,7 @@ void Read()
         size_t equals = step.name.find('=');
         if (equals != std::string::npos)
         {
-            step.choice = std::atoi(step.name.c_str() + equals + 1);
+            step.choice = static_cast<int>(std::strtol(step.name.c_str() + equals + 1, nullptr, 0));
             step.name.resize(equals);
         }
         g_steps.push_back(step);
@@ -112,6 +113,14 @@ void WocMenuTestVblank()
                 s->set(step.choice);
             }
             Ps2::Log("menu test: %.1f s: %s is %s", now, s->name, s->choices[s->get()]);
+        }
+        else if (step.what == "poke")
+        {
+            step.done = true;
+            u32 address = static_cast<u32>(std::strtoul(step.name.c_str(), nullptr, 16));
+            s32 word = step.choice;
+            std::memcpy(Ps2::EeMemory(address), &word, 4);
+            Ps2::Log("menu test: %.1f s: %08x = %d", now, address, word);
         }
         else if (step.what == "run")
         {

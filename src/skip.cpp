@@ -16,6 +16,8 @@
 //   the scenes played with the game's characters (GameMode 1: the Warp Room's first scene, and Level 0x28's, the scenes in
 //       space before a warp room's first level; UpdateGameCut at 0x255680): start pressed while no fade is on ends them (0x25583C): in Level 0x28
 //       the level after it starts (new_level = gamecut_newlevel), elsewhere play goes on (new_mode 0); held, the same
+//   the credits (menu 0x22, its case at 0x1E44B0): start pressed, or their time up, goes to the Warp Room (new_level 0x25);
+//       held, the same
 //
 // The game's state (USA v1.01): cutmovie 0x641844 (gp-0x1EAC; -1 none, 0 the title), next_cut_movie 0x641924, cutworldix
 // 0x641920, cut_on 0x63F6F8, the cut scenes 0x70E2C0 (their frame count, a float, at +8) and their instances 0x70E340 (the frame
@@ -46,6 +48,8 @@ constexpr u32 TitleStartTime = 0x641804;
 constexpr u32 TitleFps = 0x641808;
 constexpr u32 MenuNumber = 0x5A4380 + 0x5E;
 constexpr s8 LevelCutMenu = 0x12;
+constexpr s8 CreditsMenu = 0x22;
+constexpr s32 WarpRoom = 0x25;
 constexpr u32 GameMode = 0x63FD0C;
 constexpr u32 Level = 0x63F7B0;
 constexpr u32 NewLevel = 0x63F7B4;
@@ -192,10 +196,20 @@ extern "C" void WocUpdateCutMovie(Ps2Cpu* c)
     }
 }
 
-// UpdateGameCut: every frame of play; GameMode 1 while a scene with the game's characters plays
+// UpdateGameCut: every frame of play; GameMode 1 while a scene with the game's characters plays, menu 0x22 while the credits
+// roll
 extern "C" void WocUpdateGameCut(Ps2Cpu* c)
 {
     f_00255680(c);
+    if (g_enabled && Read8(MenuNumber) == CreditsMenu && Read32(NewLevel) == -1)
+    {
+        if (PollHold())
+        {
+            Ps2::Log("skip: the credits");
+            Write32(NewLevel, WarpRoom);
+        }
+        return;
+    }
     if (!g_enabled || Read32(GameMode) != 1 || Read32(GameCutFinished) != 0 || Read32(FadeValue) != 0 ||
         Read32(NewLevel) != -1 || Read32(NewMode) != -1)
     {
