@@ -3,8 +3,13 @@ project(crash_woc_mac VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 
-# The shared runtime, next to this repository by default
-set(PS2_RUNTIME_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ps2-native-runtime CACHE PATH "ps2-native-runtime's folder")
+# The runtime: its folder in this repository, or a checkout of its own next to it
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/ps2-native-runtime/CMakeLists.txt)
+    set(PS2_RUNTIME_DEFAULT ${CMAKE_CURRENT_SOURCE_DIR}/ps2-native-runtime)
+else()
+    set(PS2_RUNTIME_DEFAULT ${CMAKE_CURRENT_SOURCE_DIR}/../ps2-native-runtime)
+endif()
+set(PS2_RUNTIME_DIR ${PS2_RUNTIME_DEFAULT} CACHE PATH "ps2-native-runtime's folder")
 add_subdirectory(${PS2_RUNTIME_DIR} ps2-native-runtime)
 
 # Your own disc image: Crash Bandicoot: The Wrath of Cortex, USA v1.01 (SLUS-20238), a .cue/.bin or an .iso
