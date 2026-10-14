@@ -17,6 +17,7 @@ static void WocInit()
 int main(int argc, char** argv)
 {
     static const Ps2GameInfo game = {"Crash Bandicoot: The Wrath of Cortex (USA v1.01)", "SLUS_202.38", 5596300,
-                                     WocInit, WocTyping, WocVblank, WocMenu};
+                                     WocInit, WocTyping, WocVblank, WocMenu,
+                                     nullptr, 0, nullptr, 0, "Crash Bandicoot The Wrath of Cortex"};
     return ps2_main(argc, argv, &game);
 }
