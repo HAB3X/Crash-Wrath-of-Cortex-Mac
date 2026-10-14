@@ -20,8 +20,8 @@ static void WocInit()
 
 int main(int argc, char** argv)
 {
-    // The PC menus: the game's settings (src/options.cpp), saving from the pause menu (src/saving.cpp) and the level select in
-    // Extras (src/levels.cpp)
+    // The PC menus: the game's settings (src/options.cpp), saving (src/saving.cpp) and the level select in Extras
+    // (src/levels.cpp); the game's own pause menu kept, the PC menus opened from its options (src/menus.cpp)
     static const Ps2GameInfo game = {"Crash Bandicoot: The Wrath of Cortex (USA v1.01)",
                                      "SLUS_202.38",
                                      5596300,
@@ -33,6 +33,7 @@ int main(int argc, char** argv)
                                      WocSettingCount(),
                                      WocActions(),
                                      WocActionCount(),
-                                     "Crash Bandicoot The Wrath of Cortex"};
+                                     "Crash Bandicoot The Wrath of Cortex",
+                                     1};
     return ps2_main(argc, argv, &game);
 }

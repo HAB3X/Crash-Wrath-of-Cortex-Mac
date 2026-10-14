@@ -98,14 +98,21 @@ s32 g_titleLevel = -1;
 
 s8 Menu() { return Read8(Cursor + 0x5E); }
 
-// In play: a level (not the title, the scenes in space, a demo), nothing leaving it, no scene of the game's own, no menu
-bool InPlay()
+// A level (not the title, the scenes in space, a demo), nothing leaving it, no scene of the game's own
+bool InLevel()
 {
     s32 level = Read32(Level);
     return Read32(CutMovie) == -1 && level >= 0 && (level < Title || level == WarpRoom) && Read32(Demo) == 0 &&
            Read32(GameMode) == 0 && Read32(NewLevel) == -1 && Read32(NewMode) == -1 &&
-           (level != WarpRoom || Read32(WarpLevel) == -1) && Read32(FadeValue) == 0 && Read32(Paused) == 0 && Menu() == -1;
+           (level != WarpRoom || Read32(WarpLevel) == -1) && Read32(FadeValue) == 0;
 }
+
+// In play: in a level, no pause, no menu
+bool InPlay() { return InLevel() && Read32(Paused) == 0 && Menu() == -1; }
+
+// A level chosen in the game's pause menu, started once the game has gone on (-1 none), and the level it was chosen in
+int g_resumedIndex = -1;
+s32 g_resumedFrom = -1;
 
 // The title's main menu up, nothing chosen yet
 bool AtTitle()
@@ -114,12 +121,19 @@ bool AtTitle()
            Read32(FadeValue) == 0 && Read32(FadeRate) <= 0 && g_titleLevel == -1;
 }
 
-int CanStart() { return InPlay() || AtTitle() ? 1 : 0; }
+int CanStart() { return InPlay() || (InLevel() && InPauseMenu()) || AtTitle() ? 1 : 0; }
 
 void Start(int index)
 {
     const LevelInfo& info = Levels[index];
-    if (InPlay())
+    if (InLevel() && InPauseMenu())
+    {
+        // The game goes on first (src/woc.h), then the level's started (WocLevelsFrame)
+        g_resumedIndex = index;
+        g_resumedFrom = Read32(Level);
+        Resume();
+    }
+    else if (InPlay())
     {
         Ps2::Log("level select: %s (level %d) from level %d", info.name, info.level, Read32(Level));
         Write32(NewLevel, info.level);
@@ -160,6 +174,21 @@ using LevelTable = MakeTable<LevelCount>::type;
 
 const Ps2GameAction* WocLevelActions() { return LevelTable::actions; }
 int WocLevelActionCount() { return LevelCount; }
+
+// Every frame (src/options.cpp): a level chosen in the pause menu started when the game has gone on
+void WocLevelsFrame()
+{
+    if (g_resumedIndex == -1 || Resuming())
+    {
+        return;
+    }
+    int index = g_resumedIndex;
+    g_resumedIndex = -1;
+    if (InPlay() && Read32(Level) == g_resumedFrom)
+    {
+        Start(index);
+    }
+}
 
 // From the title's loop (UpdateCutMovie's override): a level chosen there started as NEW GAME's DONE leaves the title
 void WocTitleFrame(Ps2Cpu* c)

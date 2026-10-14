@@ -14,6 +14,8 @@ not = []
 # address = "host function": replaced by the runtime or by src/
 # MenuItem: notes where each menu line is drawn (src/menus.cpp), then draws it as before
 "0x1e5478" = "WocMenuItem"
+# NewMenu: the options' ADJUST SCREEN (said PC SETTINGS) opens the PC menus instead (src/menus.cpp)
+"0x1e2910" = "WocNewMenu"
 # UpdateCutMovie and UpdateGameCut: the cutscenes skipped by holding any button (src/skip.cpp)
 "0x254bd8" = "WocUpdateCutMovie"
 "0x255680" = "WocUpdateGameCut"

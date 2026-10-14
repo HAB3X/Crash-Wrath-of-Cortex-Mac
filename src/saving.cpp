@@ -9,11 +9,11 @@
 // The card itself is always in and formatted (the runtime's), so the game's "insert a memory card" and "format" screens never
 // come up, and its check at start-up (menu 2 over the title) passes at once.
 //
-// Saving from the PC pause menu: "Save game" (in the Warp Room, where the game itself saves) opens the game's own load and save
-// screen, as walking up to the Warp Room's save point opens it (0x1D0FB0: NewMenu(cursor, 20, row, -1) and the "yes" sound,
-// GameSfx 0x36), with SAVE GAME (its second row) chosen. The game's own screens do the rest: the save's slots, the
-// confirmation, the save written to the save folder (the memory card's files) and their messages, said as a computer's
-// (PC_TEXT.md).
+// Saving from the PC settings' Extras: "Save game" (in the Warp Room, where the game itself saves; chosen from its pause menu,
+// the game goes on first) opens the game's own load and save screen, as walking up to the Warp Room's save point opens it
+// (0x1D0FB0: NewMenu(cursor, 20, row, -1) and the "yes" sound, GameSfx 0x36), with SAVE GAME (its second row) chosen. The
+// game's own screens do the rest: the save's slots, the confirmation, the save written to the save folder (the memory card's
+// files) and their messages, said as a computer's (PC_TEXT.md).
 //
 // The game's state (USA v1.01): Level 0x63F7B0 (0x25 the Warp Room), new_level 0x63F7B4, new_mode 0x63F96C, GameMode
 // 0x63FD0C, Paused 0x63F70C, cutmovie 0x641844, fadeval 0x63E68C, the menu cursor 0x5A4380 (its menu at +0x5E), NewMenu
@@ -48,18 +48,27 @@ constexpr u32 LoadMessageDelay = 0x6417C0;
 
 bool g_open = false;
 
-int CanSave()
+// In the Warp Room, nothing leaving it
+bool InWarpRoom()
 {
     return Read32(Level) == WarpRoom && Read32(CutMovie) == -1 && Read32(GameMode) == 0 && Read32(NewLevel) == -1 &&
-                   Read32(NewMode) == -1 && Read32(FadeValue) == 0 && Read32(Paused) == 0 && Read8(Cursor + 0x5E) == -1
-               ? 1
-               : 0;
+           Read32(NewMode) == -1 && Read32(FadeValue) == 0;
 }
+
+// In play there (no pause, no menu)
+bool CanSaveNow() { return InWarpRoom() && Read32(Paused) == 0 && Read8(Cursor + 0x5E) == -1; }
+
+// Or in its pause menu (the game goes on first: src/woc.h)
+int CanSave() { return CanSaveNow() || (InWarpRoom() && InPauseMenu()) ? 1 : 0; }
 
 void Save()
 {
     if (CanSave() != 0)
     {
+        if (!CanSaveNow())
+        {
+            Resume();
+        }
         g_open = true;
     }
 }
@@ -75,12 +84,12 @@ int WocSavingActionCount() { return sizeof(Actions) / sizeof(Actions[0]); }
 // Every frame (src/options.cpp): the save screen opened when it was asked for
 void WocSavingFrame(Ps2Cpu* c)
 {
-    if (!g_open)
+    if (!g_open || Resuming())
     {
         return;
     }
     g_open = false;
-    if (CanSave() != 0)
+    if (CanSaveNow())
     {
         Ps2::Log("save game: the save screen opened");
         CallGame(c, f_001e2910, {static_cast<s32>(Cursor), LoadSaveMenu, SaveGameRow, -1});

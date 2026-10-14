@@ -175,6 +175,13 @@ const Line Lines[] = {
     {0x005e1a6c, "(8MB) (p)", "MAAK MINSTENS"},
     {0x005e1a70, "MET MINSTENS %iKB OF JE KUNT", "%iKB RUIMTE VRIJ OF JE KUNT"},
     {0x005e1a74, "NIET OPSLAAN", nullptr},
+    // The options' ADJUST SCREEN (the TV picture's position) is the PC menus' settings instead (src/menus.cpp)
+    {0x005e14a8, "ADJUST SCREEN", "PC SETTINGS"},
+    {0x005e14ac, "CENTRER L'ECRAN", "OPTIONS PC"},
+    {0x005e14b0, "BILDSCHIRM", "PC-OPTIONEN"},
+    {0x005e14b4, "REGOLA SCHERMO", "OPZIONI PC"},
+    {0x005e14b8, "AJUSTES DE IMAGEN", "OPCIONES PC"},
+    {0x005e14bc, "SCHERM AANPASSEN", "PC-INSTELLINGEN"},
 };
 
 u32 Read32(u32 address)

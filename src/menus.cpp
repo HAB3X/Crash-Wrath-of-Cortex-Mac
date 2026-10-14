@@ -5,6 +5,11 @@
 // draws the line at (x, y) in the font's screen units when it's among the cursor's shown lines, then moves y down a line
 // and counts the line. It's overridden to note each drawn line (its menu, number and place) and then run as before.
 //
+// The game's own pause menu (menu 4: RESUME, OPTIONS, QUIT) is kept; the PC menus are in its options (menu 5: VIBRATION,
+// SOUND OPTIONS, ADJUST SCREEN, DONE): ADJUST SCREEN, said PC SETTINGS (PC_TEXT.md), opens them instead of the TV picture's
+// position (menu 7). Every menu is changed by one function (0x1E2910, NewMenu(cursor, menu, row, level)), overridden to catch
+// that one.
+//
 // The game's state (USA v1.01): the menu cursor at 0x5A4380 (its menu at +0x5E, -1 for none; the current line at +0x59, the
 // first and last shown at +0x5B and +0x5D).
 #include "ps2/iop.h"
@@ -16,10 +21,13 @@
 #include <vector>
 
 extern "C" void f_001e5478(Ps2Cpu* c);
+extern "C" void f_001e2910(Ps2Cpu* c);
 
 namespace
 {
 constexpr u32 Cursor = 0x5A4380;
+constexpr s8 OptionsMenu = 5;
+constexpr s32 AdjustScreenMenu = 7;
 
 struct Drawn
 {
@@ -32,7 +40,7 @@ struct Drawn
 // The lines drawn since the last vblank, and the last complete set
 std::vector<Drawn> g_drawing;
 std::vector<Drawn> g_shown;
-bool g_logged = false;
+int g_logged = -2;
 
 u8* At(u32 address) { return Ps2::EeMemory(address); }
 
@@ -90,6 +98,17 @@ extern "C" void WocMenuItem(Ps2Cpu* c)
     f_001e5478(c);
 }
 
+// NewMenu: the options' ADJUST SCREEN opens the PC settings (the options stay up under them, for when they're closed)
+extern "C" void WocNewMenu(Ps2Cpu* c)
+{
+    if (c->r[4].uw[0] == Cursor && c->r[5].sw[0] == AdjustScreenMenu && Menu() == OptionsMenu)
+    {
+        ps2_open_settings();
+        return;
+    }
+    f_001e2910(c);
+}
+
 int WocMenu() { return Menu() != -1 ? 1 : 0; }
 
 void WocMenusVblank()
@@ -99,9 +118,11 @@ void WocMenusVblank()
         g_shown.swap(g_drawing);
         g_drawing.clear();
     }
-    if (getenv("WOC_MENU_TRACE") != nullptr && !g_shown.empty() && !g_logged)
+    int traced = (Menu() + 1) * 4096 + (g_shown.empty() ? 0 : (g_shown[0].menu + 1) * 64 + static_cast<int>(g_shown.size()));
+    if (getenv("WOC_MENU_TRACE") != nullptr && traced != g_logged)
     {
-        g_logged = true;
+        g_logged = traced;
+        Ps2::Log("menu %d up (%zu lines drawn)", Menu(), g_shown.size());
         for (const Drawn& d : g_shown)
         {
             Ps2::Log("menu %d line %d at %.3f %.3f", d.menu, d.line, d.x, d.y);
@@ -111,7 +132,6 @@ void WocMenusVblank()
     if (Menu() == -1)
     {
         // Clicks with no menu up go nowhere
-        g_logged = false;
         while (ps2_take_click(&x, &y))
         {
         }

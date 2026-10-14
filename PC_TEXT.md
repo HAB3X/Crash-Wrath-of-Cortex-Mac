@@ -196,3 +196,17 @@ The six languages: English, French, German, Italian, Spanish, Dutch. Ä, Ö, Ü 
 | NL | 6 | (8MB) (p) | MAAK MINSTENS |
 | NL | 7 | MET MINSTENS %iKB OF JE KUNT | %iKB RUIMTE VRIJ OF JE KUNT |
 | NL | 8 | NIET OPSLAAN | (kept) |
+
+### the options' ADJUST SCREEN
+
+A TV's picture position means nothing in a window: the line opens the PC settings instead (the window, the picture, the
+sound, the controls and the level select; `src/menus.cpp`).
+
+| Language | Line | Original | Replacement |
+|---|---|---|---|
+| EN | 1 | ADJUST SCREEN | PC SETTINGS |
+| FR | 1 | CENTRER L'ECRAN | OPTIONS PC |
+| DE | 1 | BILDSCHIRM | PC-OPTIONEN |
+| IT | 1 | REGOLA SCHERMO | OPZIONI PC |
+| ES | 1 | AJUSTES DE IMAGEN | OPCIONES PC |
+| NL | 1 | SCHERM AANPASSEN | PC-INSTELLINGEN |

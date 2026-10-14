@@ -31,6 +31,7 @@ int WocLevelActionCount();
 const Ps2GameAction* WocSavingActions();
 int WocSavingActionCount();
 void WocSavingFrame(Ps2Cpu* c);
+void WocLevelsFrame();
 int WocFasterLoading();
 void WocSetFasterLoading(int on);
 void WocLoadingFrame(Ps2Cpu* c);
@@ -165,7 +166,7 @@ extern "C" void WocDefaultGame(Ps2Cpu* c)
 }
 
 // Every frame: the loading screen's faster end (src/loading.cpp), a language chosen in the PC menus set, the save screen opened
-// when it's asked for (src/saving.cpp)
+// when it's asked for (src/saving.cpp), a level chosen in the pause menu started (src/levels.cpp)
 extern "C" void WocFrame(Ps2Cpu* c)
 {
     WocLoadingFrame(c);
@@ -176,5 +177,6 @@ extern "C" void WocFrame(Ps2Cpu* c)
         CallGame(c, f_00239ce0, {language});
     }
     WocSavingFrame(c);
+    WocLevelsFrame();
     f_00248750(c);
 }
