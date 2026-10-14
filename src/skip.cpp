@@ -1,8 +1,8 @@
 // Cutscenes skipped by holding any button, as the Crash Twinsanity native port does it: while a scene that can be skipped plays,
-// the PC menus' prompt says "Hold any button to skip"; any button, key or mouse button held half a second skips it. What was
-// already held as the scene began (running or jumping into it) counts only once it's let go and pressed again, and after a skip
-// whatever is still held is ignored until it's let go, so the next scene isn't skipped too. The "Skip cutscenes" setting turns
-// it off (the game's own skips, below, still work then).
+// the PC menus' prompt says "Hold any button to skip" (in the game's language); any button, key or mouse button held half a
+// second skips it. What was already held as the scene began (running or jumping into it) counts only once it's let go and
+// pressed again, and after a skip whatever is still held is ignored until it's let go, so the next scene isn't skipped too. The
+// "Skip cutscenes" setting turns it off (the game's own skips, below, still work then).
 //
 // Each skip is the game's own way of ending that scene, done where the game would do it:
 //   the logos and the title's opening (the cut movie 0's first world: the publishers' logos, then the flight through space to
@@ -74,12 +74,25 @@ struct Hold
 Hold g_hold;
 bool g_prompt = false;
 
+// The prompt in the game's language (the Game's settings' +0xF: English, French, German, Italian, Spanish, Dutch), as the Crash
+// Twinsanity port words it
+const char* const Prompts[] = {
+    "Hold any button to skip",
+    "Maintiens une touche pour passer",
+    "Beliebige Taste halten zum Überspringen",
+    "Tieni premuto un tasto per saltare",
+    "Mantén cualquier botón para saltar",
+    "Houd een knop ingedrukt om over te slaan",
+};
+constexpr u32 Language = 0x59D518 + 0xF;
+
 void ShowPrompt(bool show)
 {
     if (show != g_prompt)
     {
         g_prompt = show;
-        ps2_show_prompt(show ? "Hold any button to skip" : nullptr);
+        u8 language = static_cast<u8>(Read8(Language));
+        ps2_show_prompt(show ? Prompts[language < 6 ? language : 0] : nullptr);
     }
 }
 
