@@ -14,8 +14,9 @@
 //   the cutscenes inside a level (menu 0x12 over the play, UpdateCutMovie called from the main loop): start or cut_on 0 ends
 //       them (the menu's case at 0x1E4468: the cursor's level started, or the menu closed); held, cut_on 0
 //   the scenes played with the game's characters (GameMode 1: the Warp Room's first scene, and Level 0x28's, the scenes in
-//       space before a warp room's first level; UpdateGameCut at 0x255680): start pressed while no fade is on ends them (0x25583C): in Level 0x28
-//       the level after it starts (new_level = gamecut_newlevel), elsewhere play goes on (new_mode 0); held, the same
+//       space before a warp room's first level; UpdateGameCut at 0x255680): start pressed while no fade is on ends them
+//       (0x25583C): in Level 0x28 the level after it starts (new_level = gamecut_newlevel), elsewhere play goes on (new_mode
+//       0); held, the same
 //   the credits (menu 0x22, its case at 0x1E44B0): start pressed, or their time up, goes to the Warp Room (new_level 0x25);
 //       held, the same
 //
