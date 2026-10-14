@@ -8,7 +8,9 @@
 //   the logos and the title's opening (the cut movie 0's first world: the publishers' logos, then the flight through space to
 //       the title): the first time it plays from its start; every later time (the game back at the title) StartCutMovie
 //       (0x254E38) starts it TITLESTARTTIME x TITLEFPS (0x641804 x 0x641808: 6 s at 30 frames a second) before the end of its
-//       first world. Held, the opening jumps to that place, as a later visit starts
+//       first world. Held, the opening jumps to that place, as a later visit starts, and with a later visit's sound: the
+//       logos' own (LOGOS.VAG, a stream on voice 4 timed to the whole first world) stopped and the title's music
+//       (GameMusic 0xAA) started there, logos_played set so the first world's end doesn't start the music again
 //   the cut movies (the intro, the endings: cutmovie 1-4, PlayCutMovie at 0x254FB8): start pressed ends them (next_cut_movie
 //       -1, the loop left); held, the same: next_cut_movie -1 and cut_on 0, the end CutSceneEndFunction (0x257580) gives them
 //   the cutscenes inside a level (menu 0x12 over the play, UpdateCutMovie called from the main loop): start or cut_on 0 ends
@@ -21,9 +23,10 @@
 //       held, the same
 //
 // The game's state (USA v1.01): cutmovie 0x641844 (gp-0x1EAC; -1 none, 0 the title), next_cut_movie 0x641924, cutworldix
-// 0x641920, cut_on 0x63F6F8, the cut scenes 0x70E2C0 (their frame count, a float, at +8) and their instances 0x70E340 (the frame
-// played at +0x70), the menu cursor 0x5A4380 (its menu at +0x5E), GameMode 0x63FD0C, Level 0x63F7B0, new_level 0x63F7B4,
-// new_mode 0x63F96C, gamecut_finished 0x641854, gamecut_newlevel 0x641858, fadeval 0x63E68C.
+// 0x641920, cut_on 0x63F6F8, logos_played 0x641800, cutmovie_hold 0x64180C (the picture held until the scene's stream plays),
+// the cut scenes 0x70E2C0 (their frame count, a float, at +8) and their instances 0x70E340 (the frame played at +0x70), the menu
+// cursor 0x5A4380 (its menu at +0x5E), GameMode 0x63FD0C, Level 0x63F7B0, new_level 0x63F7B4, new_mode 0x63F96C,
+// gamecut_finished 0x641854, gamecut_newlevel 0x641858, fadeval 0x63E68C; NuSoundStopStream 0x1C3370, GameMusic 0x248FF0.
 #include "woc.h"
 
 #include "ps2/runtime.h"
@@ -32,6 +35,8 @@
 
 extern "C" void f_00254bd8(Ps2Cpu* c); // UpdateCutMovie
 extern "C" void f_00255680(Ps2Cpu* c); // UpdateGameCut
+extern "C" void f_001c3370(Ps2Cpu* c); // NuSoundStopStream
+extern "C" void f_00248ff0(Ps2Cpu* c); // GameMusic
 
 void WocTitleFrame(Ps2Cpu* c);
 
@@ -47,6 +52,10 @@ constexpr u32 CutScenes = 0x70E2C0;
 constexpr u32 CutInstances = 0x70E340;
 constexpr u32 TitleStartTime = 0x641804;
 constexpr u32 TitleFps = 0x641808;
+constexpr u32 LogosPlayed = 0x641800;
+constexpr u32 CutMovieHold = 0x64180C;
+constexpr s32 CutStreamVoice = 4;
+constexpr s32 TitleMusic = 0xAA;
 constexpr u32 MenuNumber = 0x5A4380 + 0x5E;
 constexpr s8 LevelCutMenu = 0x12;
 constexpr s8 CreditsMenu = 0x22;
@@ -185,6 +194,12 @@ extern "C" void WocUpdateCutMovie(Ps2Cpu* c)
         {
             Ps2::Log("skip: the title's opening, to frame %.0f", frame);
             WriteFloat(static_cast<u32>(Read32(CutInstances)) + 0x70, frame);
+            // The sound a later visit has from that place (StartCutMovie at 0x254E38): no logos' stream, which would play on
+            // over the title, timed to the frames jumped over; the title's music at once rather than at the first world's end
+            CallGame(c, f_001c3370, {CutStreamVoice});
+            Write32(CutMovieHold, 0);
+            CallGame(c, f_00248ff0, {TitleMusic, 0});
+            Write32(LogosPlayed, 1);
         }
     }
     else if (Read8(MenuNumber) == LevelCutMenu)
