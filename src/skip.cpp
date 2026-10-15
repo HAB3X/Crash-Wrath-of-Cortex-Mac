@@ -1,6 +1,8 @@
 // Cutscenes skipped by holding any button, as the Crash Twinsanity native port does it: while a scene that can be skipped plays,
 // the PC menus' prompt says "Hold any button to skip" (in the game's language); any button, key or mouse button held half a
-// second skips it. What was already held as the scene began (running or jumping into it) counts only once it's let go and
+// second skips it. The prompt fades in as the scene begins and out after 3 s with nothing pressed, comes back while something
+// is pressed, and goes as the scene is skipped or ends (shown for a whole scene, it stayed over the Warp Room's 46 s first
+// scene and the like). What was already held as the scene began (running or jumping into it) counts only once it's let go and
 // pressed again, and after a skip whatever is still held is ignored until it's let go, so the next scene isn't skipped too. The
 // "Skip cutscenes" setting turns it off (the game's own skips, below, still work then).
 //
@@ -69,9 +71,11 @@ constexpr u32 GameCutNewLevel = 0x641858;
 constexpr u32 FadeValue = 0x63E68C;
 constexpr s32 SpaceLevel = 0x28;
 
-// Half a second held skips; a scene is the polls in a row, a quarter of a second without one ends it (vertical blanks)
+// Half a second held skips; a scene is the polls in a row, a quarter of a second without one ends it; the prompt stays 3 s
+// after the scene's start or the last press (vertical blanks)
 constexpr u64 HoldVblanks = 30;
 constexpr u64 SceneGapVblanks = 15;
+constexpr u64 PromptVblanks = 180;
 
 bool g_enabled = true;
 std::atomic<u64> g_vblanks{0};
@@ -84,6 +88,9 @@ struct Hold
     bool ignoring = false;
     bool holding = false;
     u64 since = 0;
+    // The scene's start or the last press counted, for the prompt; skipped: the prompt stays down
+    u64 lastInput = 0;
+    bool skipped = false;
 };
 Hold g_hold;
 bool g_prompt = false;
@@ -120,9 +127,14 @@ bool PollHold()
         g_hold = {};
         g_hold.scene = true;
         g_hold.ignoring = held;
+        g_hold.lastInput = now;
     }
     g_hold.lastPoll = now;
-    ShowPrompt(true);
+    if (held && !g_hold.ignoring)
+    {
+        g_hold.lastInput = now;
+    }
+    ShowPrompt(!g_hold.skipped && now - g_hold.lastInput < PromptVblanks);
     if (!held)
     {
         g_hold.ignoring = false;
@@ -144,6 +156,8 @@ bool PollHold()
     }
     g_hold.holding = false;
     g_hold.ignoring = true;
+    g_hold.skipped = true;
+    ShowPrompt(false);
     return true;
 }
 
