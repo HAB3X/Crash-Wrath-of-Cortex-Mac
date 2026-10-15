@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(crash_woc_mac VERSION 0.1.3 LANGUAGES C CXX)
+project(crash_woc_mac VERSION 0.1.4 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 

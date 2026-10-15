@@ -66,7 +66,8 @@ which opens the PC menus, in the Crash Twinsanity Mac port's style:
 - **Gameplay:** pause in the background, skip cutscenes, faster loading, the language (it follows your Mac's preferred
   languages: English, French, German, Italian, Spanish or Dutch).
 - **Display:** window size or fullscreen, the internal resolution (1x to 8x the PS2's), texture filtering, texture upscale
-  (2x, 4x), anti-aliasing (FXAA, or supersampling 2x and 4x, which is slower), the CRT filter, v-sync.
+  (2x, 4x), anti-aliasing (FXAA, or supersampling 2x and 4x, which is slower), the CRT filter, v-sync, and the levels'
+  distance blur (off: the game draws it at the PS2's own resolution, so it looks much softer than the rest).
 - **Sound:** the master volume, mute in the background, and the game's music and sound effects volumes.
 - **Controls:** the button prompts' style and every key to rebind.
 - **Extras:** a level select (every warp room's levels and the secret levels: nothing is unlocked or written to your save), and
