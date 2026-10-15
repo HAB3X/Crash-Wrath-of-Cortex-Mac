@@ -15,6 +15,9 @@ here unchanged except for:
 - the port's DMA chain runner (`ee/dma.*`) and its 64 bit host address slots (`ee/address.*`) are left out: a recompiled game
   has real PS2 addresses, and the runtime's DMA controller (`runtime/src/dmac.cpp`) runs the channels
 - `gs/gs.h` and `gs/gs.cpp`: `Gs::eventHook`, told of SIGNAL, FINISH and LABEL writes (the runtime's CSR and the GS interrupt)
+- `gs/gs.h`, `gs/gs.cpp` and `gs/gsdraw.cpp`: `Gs::shownBufferWrites`, the primitives and transfers that wrote into a buffer
+  an enabled circuit shows (the runtime's frame counter: Crash Tag Team Racing copies each finished picture into a display
+  buffer it never moves)
 - `gs/gsdraw.cpp`: `Wrap` keeps the region clamp's and region repeat's texel inside the decoded level (a region past the
   texture's size read past it)
 - `ee/vu1translate.*`, `ee/vu1jit.h` and the translator (`native/tools/vu1_translate.py` and `vudecode.py` there,
@@ -31,6 +34,9 @@ here unchanged except for:
   (`selfCopyFor_`, as PCSX2's hardware renderers do), instead of a copy of the whole target and two render passes for each
   primitive; WoC's Warp Room has about 300 such primitives a frame and went from 10-20 frames a second at 3x to 60.
   `TWIN_HW_EXACT_FEEDBACK=1` copies for each primitive again
+- `ee/vif.h` and `ee/vif.cpp`: a code's interrupt bit stalls the VIF once the code is done (`Process` returns the words it
+  took, `CancelStall` is FBRST's STC) and calls the runtime's `interrupt` function (the INTC's VIF0 or VIF1 cause); `lastCode`
+  is VIFn_CODE. Crash Tag Team Racing's renderer starts each texture's upload from its VIF1 interrupt handler
 - `gs/workers.cpp`: the workers ask macOS for the performance cores (QoS user interactive): rows are shared out evenly, so
   a worker on an efficiency core held every primitive up
 - `hw/hwgs.cpp`, for Wrath of Cortex's depth-of-field effect in its levels (stripes across the far scenery, 11 frames a

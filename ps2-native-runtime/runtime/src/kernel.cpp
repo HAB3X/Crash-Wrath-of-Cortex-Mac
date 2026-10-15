@@ -107,8 +107,12 @@ struct Alarm
 
 std::mutex g_lock;
 Thread* g_current = nullptr;
-// While the timer thread runs handlers with no thread current
+// While the timer thread runs handlers with no thread current (or with the current one waiting for the render thread)
 bool g_idleHandling = false;
+std::condition_variable g_idleHandled;
+// The current thread waits for the render thread at a poll point: the timer thread runs the handlers meanwhile, as when every
+// thread waits
+bool g_holderWaiting = false;
 std::map<int, Thread*> g_threads;
 std::map<int, Sema*> g_semas;
 int g_nextThread = 1;
@@ -120,6 +124,9 @@ int g_nextHandler = 1;
 std::vector<Alarm> g_alarms;
 int g_nextAlarm = 1;
 bool g_interruptsEnabled = true;
+// COP0 Status's EXL and ERL (bits 1 and 2), as the game's own kernel-mode code sets them (CTTR's libkernel writes timer 2 with
+// ERL on, then ERETs back): interrupts wait while either is on, as on the console
+u32 g_exceptionLevel = 0;
 int g_inInterrupt = 0;
 u32 g_heapEnd = 0;
 u32 g_mainStack = 0;
@@ -128,9 +135,12 @@ u32 g_argsAddress = 0;
 std::vector<std::string> g_args;
 std::chrono::steady_clock::time_point g_start = std::chrono::steady_clock::now();
 std::condition_variable g_idleCv;
-// Pending events the processor holder deals with: vblank start and end
-std::atomic<int> g_vblankStart{0};
-std::atomic<int> g_vblankEnd{0};
+// The vertical blank's edges the timer thread has made (each blank's start, then its end: an odd count is a blank begun) and
+// those taken. Counted, not flagged: a holder kept from its poll points for longer than a field (a long transfer, the host
+// busy elsewhere) takes the ones it missed one after another instead of as one, so the game counts every blank, as on the
+// console, where they come at 59.94 Hz whatever the game is doing
+std::atomic<u64> g_vblankEdges{0};
+u64 g_vblankEdgesTaken = 0;
 // The PC menus' pause: wanted (the processor holder stops at its next poll point, the timer thread makes no vblanks or
 // alarms), and work for the game's side (a setting's change, an action), done by whoever holds the processor between its
 // instructions, or by the timer thread when no thread does
@@ -170,7 +180,7 @@ void Ret(Ps2Cpu* c, s64 value) { c->r[2].sd[0] = value; }
 void UpdatePending()
 {
     bool any = (g_intcStat & g_intcMask) != 0 || (g_dmacStat & (g_dmacStat >> 16) & 0x3FF) != 0 ||
-               g_vblankStart.load() != 0 || g_vblankEnd.load() != 0 || g_pauseWanted || !g_gameWork.empty();
+               g_vblankEdges.load() != g_vblankEdgesTaken || g_pauseWanted || !g_gameWork.empty();
     if (!any)
     {
         u64 now = BusCycles();
@@ -358,21 +368,32 @@ void Park(std::unique_lock<std::mutex>& lock)
     }
 }
 
-// Runs what's pending (the lock held, released around the guest's handlers)
-void ServiceLocked(std::unique_lock<std::mutex>& lock)
+// The next vertical blank edge the timer thread made: its start's effects (the GS's CSR and picture, the pads, the game's and
+// the menus' hooks) and its INTC cause. Not while the cause of the edge before it still waits for its handlers (interrupts
+// off, or a handler running): each blank's handlers run once. A masked cause just stays set, as the INTC keeps it. Whether
+// one was taken (the lock held, released around the effects); `hold` is set when the game's thread is to wait for the render
+// thread afterwards
+bool TakeVblankEdge(std::unique_lock<std::mutex>& lock, bool& hold)
 {
-    if (g_inInterrupt == 0)
+    u64 made = g_vblankEdges.load();
+    if (g_vblankEdgesTaken == made)
     {
-        if (g_pauseWanted && !g_idleHandling)
-        {
-            Park(lock);
-        }
-        RunGameWork(lock);
+        return false;
     }
-    if (g_vblankStart.exchange(0))
+    bool start = g_vblankEdgesTaken % 2 == 0;
+    u32 cause = start ? 1u << 2 : 1u << 3;
+    if (g_intcStat & g_intcMask & cause)
     {
+        return false;
+    }
+    g_vblankEdgesTaken++;
+    if (start)
+    {
+        // Another blank begun after this one: its picture would be replaced at once
+        bool newest = made - g_vblankEdgesTaken < 2;
+        bool gameThread = !g_idleHandling;
         lock.unlock();
-        GsVblank(true);
+        hold = GsVblank(newest, gameThread) || hold;
         PadVblank();
         if (g_game != nullptr && g_game->vblank != nullptr)
         {
@@ -380,7 +401,6 @@ void ServiceLocked(std::unique_lock<std::mutex>& lock)
         }
         Ui::MenusGameVblank();
         lock.lock();
-        g_intcStat |= 1u << 2;
         if (g_vsyncFlag != 0)
         {
             Write32(g_vsyncFlag, 1);
@@ -389,18 +409,13 @@ void ServiceLocked(std::unique_lock<std::mutex>& lock)
             g_vsyncFlag = 0;
         }
     }
-    if (g_vblankEnd.exchange(0))
-    {
-        lock.unlock();
-        GsVblank(false);
-        lock.lock();
-        g_intcStat |= 1u << 3;
-    }
-    if (!g_interruptsEnabled || g_inInterrupt > 0)
-    {
-        UpdatePending();
-        return;
-    }
+    g_intcStat |= cause;
+    return true;
+}
+
+// The handlers of the INTC's causes, the DMAC's channels and the alarms due (the lock held, released around them)
+void RunHandlers(std::unique_lock<std::mutex>& lock)
+{
     g_inInterrupt++;
     for (int round = 0; round < 8; round++)
     {
@@ -486,6 +501,60 @@ void ServiceLocked(std::unique_lock<std::mutex>& lock)
         }
     }
     g_inInterrupt--;
+}
+
+// The game's thread kept at most two pictures ahead of the render thread (it would otherwise run ahead of what's shown
+// without bound). It waits at a poll point, so the timer thread runs the interrupts' handlers meanwhile, as when every thread
+// waits: the game sees each vertical blank as it comes, as on the console, where the EE waiting for the GS doesn't hold them
+// up. Taken one after another once it went on, a game's swaps at the blanks' ends would all be just past (WoC starts its next
+// frame once the last swap was under 100 lines ago) and let frames through without a blank between them
+void HoldForRender(std::unique_lock<std::mutex>& lock)
+{
+    g_holderWaiting = true;
+    lock.unlock();
+    RenderHold();
+    lock.lock();
+    while (g_idleHandling)
+    {
+        g_idleHandled.wait(lock);
+    }
+    g_holderWaiting = false;
+}
+
+// Runs what's pending (the lock held, released around the guest's handlers): the blanks' edges one at a time, each with its
+// handlers
+void ServiceLocked(std::unique_lock<std::mutex>& lock)
+{
+    if (g_inInterrupt == 0)
+    {
+        if (g_pauseWanted && !g_idleHandling)
+        {
+            Park(lock);
+        }
+        RunGameWork(lock);
+    }
+    bool hold = false;
+    for (;;)
+    {
+        bool took = TakeVblankEdge(lock, hold);
+        if (!g_interruptsEnabled || g_exceptionLevel != 0 || g_inInterrupt > 0)
+        {
+            if (!took)
+            {
+                break;
+            }
+            continue;
+        }
+        RunHandlers(lock);
+        if (!took || g_vblankEdgesTaken == g_vblankEdges.load())
+        {
+            break;
+        }
+    }
+    if (hold)
+    {
+        HoldForRender(lock);
+    }
     UpdatePending();
 }
 
@@ -500,8 +569,24 @@ void TimerThread()
     for (;;)
     {
         next += std::chrono::nanoseconds(static_cast<long long>(1e9 / g_vblankRate));
-        // Sleep until the vblank, waking for alarms on the way
-        std::this_thread::sleep_until(next);
+        // Sleep until the vblank, waking for the timers' events on the way (alarms are seen at the vblank)
+        for (;;)
+        {
+            u64 event = IoTimerEvents();
+            auto now = clock::now();
+            if (now >= next)
+            {
+                break;
+            }
+            auto until = next;
+            u64 cycles = BusCycles();
+            if (event != ~0ull)
+            {
+                auto wait = std::chrono::nanoseconds(event > cycles ? static_cast<long long>((event - cycles) / 0.147456) : 0);
+                until = std::min(next, now + std::max(wait, std::chrono::nanoseconds(100000)));
+            }
+            std::this_thread::sleep_until(until);
+        }
         {
             std::unique_lock<std::mutex> lock(g_lock);
             if (g_pauseWanted)
@@ -514,27 +599,30 @@ void TimerThread()
                         g_idleHandling = true;
                         RunGameWork(lock);
                         g_idleHandling = false;
+                        g_idleHandled.notify_all();
                     }
                     g_pauseCv.wait_for(lock, std::chrono::milliseconds(10));
                 }
                 next = clock::now();
                 continue;
             }
-            g_vblankStart = 1;
+            g_vblankEdges++;
             UpdatePending();
         }
+        IopUpdate();
         // The blank lasts about 22 lines of 525
         std::this_thread::sleep_for(std::chrono::microseconds(700));
         {
             std::unique_lock<std::mutex> lock(g_lock);
-            g_vblankEnd = 1;
+            g_vblankEdges++;
             UpdatePending();
-            if (g_current == nullptr && !g_idleHandling)
+            if ((g_current == nullptr || g_holderWaiting) && !g_idleHandling)
             {
-                // Nobody holds the processor: the handlers run here
+                // Nobody holds the processor, or its holder waits for the render thread: the handlers run here
                 g_idleHandling = true;
                 ServiceLocked(lock);
                 g_idleHandling = false;
+                g_idleHandled.notify_all();
                 if (g_current == nullptr)
                 {
                     Dispatch();
@@ -964,8 +1052,10 @@ const char* SyscallName(int n)
     case 0x15: return "DisableIntc";
     case 0x16: return "EnableDmac";
     case 0x17: return "DisableDmac";
-    case 0x18: return "SetAlarm";
-    case 0x19: return "ReleaseAlarm";
+    case 0x18: case 0xFC: return "SetAlarm";
+    case 0x19: case 0xFD: return "ReleaseAlarm";
+    case 0x1E: case 0xFE: return "iSetAlarm";
+    case 0x1F: case 0xFF: return "iReleaseAlarm";
     case 0x20: return "CreateThread";
     case 0x22: return "StartThread";
     case 0x29: return "ChangeThreadPriority";
@@ -1029,7 +1119,7 @@ void KernelOnGameSide(std::function<void()> work)
 
 bool InInterrupt() { return g_inInterrupt > 0; }
 
-bool InterruptsEnabled() { return g_interruptsEnabled; }
+u32 KernelStatus() { return 0x70000C01 | (g_interruptsEnabled ? 0x10000u : 0) | g_exceptionLevel; }
 
 void KernelDumpThreads()
 {
@@ -1149,6 +1239,22 @@ extern "C" void ps2_di(Ps2Cpu* c)
     g_interruptsEnabled = false;
 }
 
+namespace Ps2
+{
+void KernelSetStatus(Ps2Cpu* c, u32 status)
+{
+    g_exceptionLevel = status & 6;
+    if (status & 0x10000)
+    {
+        ps2_ei(c);
+    }
+    else
+    {
+        ps2_di(c);
+    }
+}
+}
+
 extern "C" void ps2_syscall(Ps2Cpu* c, u32 pc)
 {
     s32 number = c->r[3].sw[0];
@@ -1252,6 +1358,8 @@ extern "C" void ps2_syscall(Ps2Cpu* c, u32 pc)
     }
     case 0x18: // SetAlarm(ticks in hsyncs, handler, arg)
     case 0x1E:
+    case 0xFC: // libkernel 2.7 on: its own SetAlarm and iSetAlarm (0xFE), which its kernel patch (0x5B) puts at 0xFC-0xFF
+    case 0xFE:
     {
         Alarm a;
         a.id = g_nextAlarm++;
@@ -1266,6 +1374,8 @@ extern "C" void ps2_syscall(Ps2Cpu* c, u32 pc)
     }
     case 0x19: // ReleaseAlarm
     case 0x1F:
+    case 0xFD: // libkernel 2.7 on: ReleaseAlarm and iReleaseAlarm (0xFF)
+    case 0xFF:
     {
         int id = static_cast<s32>(Arg(c, 0));
         auto it = std::find_if(g_alarms.begin(), g_alarms.end(), [&](const Alarm& a) { return a.id == id; });

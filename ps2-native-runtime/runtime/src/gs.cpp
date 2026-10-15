@@ -42,8 +42,25 @@ u64 g_pmode = 0, g_smode2 = 0, g_dispfb[2] = {}, g_display[2] = {}, g_bgcolor = 
 u64 g_other[0x20] = {};
 u32 g_field = 0;
 std::atomic<u64> g_vblanks{0};
-// The game's frames: the displayed buffer's changes (DISPFB written with a new value)
-std::atomic<u64> g_flips{0};
+// The game's frames: the vblank periods in which it presented a picture, by showing another buffer (an enabled circuit's
+// DISPFB changed) or by writing into the one shown (a game that copies each finished picture into a display buffer it never
+// moves: CTTR). Counted on the GS's side at each vblank, in order with what the game sent before it
+std::atomic<u64> g_frames{0};
+
+void CountFrame(const Gs::Gs& gs)
+{
+    static u64 shown[2] = {};
+    static u64 writes = 0;
+    bool moved = (gs.pmode.en1 != 0 && gs.dispfb[0].value != shown[0]) || (gs.pmode.en2 != 0 && gs.dispfb[1].value != shown[1]);
+    bool written = gs.shownBufferWrites != writes;
+    shown[0] = gs.dispfb[0].value;
+    shown[1] = gs.dispfb[1].value;
+    writes = gs.shownBufferWrites;
+    if (moved || written)
+    {
+        g_frames++;
+    }
+}
 
 std::mutex g_pictureLock;
 std::condition_variable g_pictureCv;
@@ -92,6 +109,9 @@ void GsInit()
     g_hw.vu1 = new Ee::Vu(1);
     g_hw.vif0 = new Ee::Vif(0, *g_hw.vu0, nullptr);
     g_hw.vif1 = new Ee::Vif(1, *g_hw.vu1, g_hw.gif);
+    // A code's interrupt bit: the INTC's VIF0 or VIF1 cause, the VIF stalled until the game cancels it
+    g_hw.vif0->interrupt = [](u32) { RaiseIntc(4); };
+    g_hw.vif1->interrupt = [](u32) { RaiseIntc(5); };
     g_hw.gs->eventHook = GsEvent;
     // Field rendering's half line dropped, so the picture doesn't shake (hw/gs/gs.h; $PS2_STEADY_FIELDS=0 keeps it, as on a TV)
     const char* steady = getenv("PS2_STEADY_FIELDS");
@@ -212,7 +232,6 @@ void GsPrivWrite(u32 a, u64 v)
         RenderCall([gs, v] { gs->smode2.value = v; });
         break;
     case 0x12000070:
-        g_flips += g_dispfb[0] != v;
         g_dispfb[0] = v;
         RenderCall([gs, v] { gs->dispfb[0].value = v; });
         break;
@@ -221,7 +240,6 @@ void GsPrivWrite(u32 a, u64 v)
         RenderCall([gs, v] { gs->display[0].value = v; });
         break;
     case 0x12000090:
-        g_flips += g_dispfb[1] != v && !(g_pmode & 1);
         g_dispfb[1] = v;
         RenderCall([gs, v] { gs->dispfb[1].value = v; });
         break;
@@ -258,13 +276,11 @@ void GsSetCrt(u32 interlaced, u32 mode, u32 field)
     RenderCall([gs, v] { gs->smode2.value = v; });
 }
 
-void GsVblank(bool start)
+bool GsVblank(bool newest, bool gameThread)
 {
-    if (!start)
-    {
-        return;
-    }
     u64 vblanks = ++g_vblanks;
+    Gs::Gs* gs = g_hw.gs;
+    RenderCall([gs] { CountFrame(*gs); });
     g_field ^= 1;
     g_csr |= 8;
     if (!(g_imr & 0x800))
@@ -275,7 +291,8 @@ void GsVblank(bool start)
     // fast the host draws and loads
     static double nextEvery = g_options.snapshotEvery;
     static size_t nextAt = 0;
-    std::vector<std::string> names;
+    // Due and not yet given a picture (they wait for the newest blank's)
+    static std::vector<std::string> names;
     if (!g_options.snapshotDir.empty())
     {
         double game = static_cast<double>(vblanks) / 59.94;
@@ -296,13 +313,13 @@ void GsVblank(bool start)
     // The picture: every frame for a window or snapshots (the game's thread kept at most two pictures ahead), its pixels read
     // for a snapshot when one is due
     bool show = !g_options.headless || !g_options.ui.empty();
-    if (!show && g_options.snapshotDir.empty())
+    if ((!show && g_options.snapshotDir.empty()) || !newest)
     {
-        return;
+        return false;
     }
     // Made on the GS's side once it has drawn what came before (the game's thread goes on, at most two pictures ahead): the
     // GPU's picture copied for the window, the pixels read when there's no copy or a snapshot wants them
-    RenderFrame([show, names = std::move(names)] {
+    bool queued = RenderFrame([show, names = names] {
         Gs::DisplayImage image;
         bool copied = false;
         if (show && DisplayOnGpu())
@@ -350,7 +367,12 @@ void GsVblank(bool start)
         g_picture = std::move(image);
         g_pictureSerial++;
         g_pictureCv.notify_all();
-    });
+    }, gameThread);
+    if (queued)
+    {
+        names.clear();
+    }
+    return gameThread;
 }
 
 void PresenterStop()
@@ -379,7 +401,7 @@ void PresenterRun()
     auto start = clock::now();
     double nextWatch = 0;
     double nextFps = 1;
-    u64 lastFlips = 0, lastVblanks = 0;
+    u64 lastFrames = 0, lastVblanks = 0;
     InputInit();
     u64 shown = 0;
     // The last picture of the GS's memory (the software GS's), for the menus' scripted pictures when headless
@@ -418,8 +440,8 @@ void PresenterRun()
         {
             // Each second: the game's frames and the vblanks (60 a second is the PS2's own speed), in the window's title and
             // (--fps) the log
-            u64 flips = g_flips.load(), vblanks = g_vblanks;
-            u64 frames = flips - lastFlips, blanks = vblanks - lastVblanks;
+            u64 counted = g_frames.load(), vblanks = g_vblanks;
+            u64 frames = counted - lastFrames, blanks = vblanks - lastVblanks;
             if (g_options.fps)
             {
                 Log("%.0f s: %llu frames, %llu vblanks", t, static_cast<unsigned long long>(frames),
@@ -439,7 +461,7 @@ void PresenterRun()
                 }
                 SDL_SetWindowTitle(g_window, title);
             }
-            lastFlips = flips;
+            lastFrames = counted;
             lastVblanks = vblanks;
             nextFps = t + 1;
         }
