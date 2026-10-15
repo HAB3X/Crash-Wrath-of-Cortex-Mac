@@ -26,3 +26,5 @@ not = []
 "0x248750" = "WocFrame"
 # UpdateSaveSlots: the save file's read without the memory card's minimum wait (src/saving.cpp)
 "0x253880" = "WocUpdateSaveSlots"
+# tbslotLastValue: the main loop's render timers, answered so that late frames are made up (src/catchup.cpp)
+"0x16a780" = "WocRenderTime"
