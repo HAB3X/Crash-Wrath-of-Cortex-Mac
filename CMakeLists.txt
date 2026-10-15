@@ -22,7 +22,7 @@ ps2_recompile(woc_code CONFIG ${CMAKE_CURRENT_SOURCE_DIR}/config/woc.toml DISC $
 
 add_executable(crash-woc src/main.cpp src/nusound.cpp src/typing.cpp src/pctext.cpp src/menus.cpp src/skip.cpp src/levels.cpp
                          src/options.cpp src/saving.cpp src/loading.cpp src/catchup.cpp
-                         src/menutest.cpp)
+                         src/menutest.cpp src/blur.cpp)
 target_link_libraries(crash-woc PRIVATE woc_code ps2runtime)
 
 if(APPLE)

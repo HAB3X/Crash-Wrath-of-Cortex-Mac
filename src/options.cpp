@@ -1,11 +1,12 @@
 // The game's settings in the runtime's PC menus, and its language at start-up.
 //
-// Gameplay: "Skip cutscenes" (src/skip.cpp), "Faster loading" (src/loading.cpp) and "Language". The game's language follows the
-// Mac's preferred languages as the console's would follow its own setting (the first of them the game has: English, French,
-// German, Italian, Spanish, Dutch; English otherwise), or the one chosen here. It's set as the game's own options menu sets it,
-// with NewLanguage (0x239CE0: the language's number into the Game's settings and the menus' texts copied for it): at start-up
-// right after DefaultGame (0x1EED18, which sets English) and, when it's chosen in the PC menus, at the next frame. A loaded
-// save still brings its own language, as on the PS2; the game's own menu still changes it.
+// Gameplay: "Skip cutscenes" (src/skip.cpp), "Faster loading" (src/loading.cpp) and "Language". Display: "Distance blur"
+// (src/blur.cpp). The game's language follows the Mac's preferred languages as the console's would follow its own setting (the
+// first of them the game has: English, French, German, Italian, Spanish, Dutch; English otherwise), or the one chosen here.
+// It's set as the game's own options menu sets it, with NewLanguage (0x239CE0: the language's number into the Game's settings
+// and the menus' texts copied for it): at start-up right after DefaultGame (0x1EED18, which sets English) and, when it's chosen
+// in the PC menus, at the next frame. A loaded save still brings its own language, as on the PS2; the game's own menu still
+// changes it.
 //
 // Sound: "Music volume" and "Sound effects volume", the game's own (its sound options' MUSIC VOLUME and FX VOLUME, 0-100%,
 // kept in the save): the Game's settings at 0x59D518 (the name, then vibration +9, surround +0xA, the effects' volume +0xB, the
@@ -25,6 +26,8 @@ extern "C" void f_00239ce0(Ps2Cpu* c); // NewLanguage(language)
 extern "C" void f_00248750(Ps2Cpu* c); // the sound effects' frame (every frame of every loop)
 
 int WocSkipEnabled();
+int WocDistanceBlur();
+void WocSetDistanceBlur(int on);
 void WocSetSkipEnabled(int on);
 const Ps2GameAction* WocLevelActions();
 int WocLevelActionCount();
@@ -123,6 +126,7 @@ const Ps2GameSetting Settings[] = {
     {"Gameplay", "Skip cutscenes", OffOn, WocSkipEnabled, WocSetSkipEnabled},
     {"Gameplay", "Faster loading", OffOn, WocFasterLoading, WocSetFasterLoading},
     {"Gameplay", "Language", LanguageChoices, GetLanguage, SetLanguage},
+    {"Display", "Distance blur", OffOn, WocDistanceBlur, WocSetDistanceBlur},
     {"Sound", "Music volume", VolumeChoices, GetMusicVolume, SetMusicVolume},
     {"Sound", "Sound effects volume", VolumeChoices, GetEffectsVolume, SetEffectsVolume},
 };
